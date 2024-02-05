@@ -40,28 +40,6 @@ def connect_to_psql(host, user, password, database):
     except psycopg2.Error as e:
         print(f"Error: {e}")
         return
-'''
-def connect_to_mariadb(host, user, password, database):
-    try:
-        # Establish a connection to the MariaDB server
-        connection = mariadb.connect(
-            host=host,
-            user=user,
-            password=password,
-            database=database
-        )
-
-        try:
-            connection.ping()
-            print("Connected to MariaDB")
-            return connection
-        except:
-            return 
-
-    except mariadb.Error as e:
-        print(f"Error: {e}")
-        return
-'''
 
 def get_budgets():
     endpoint = '/budgets'
