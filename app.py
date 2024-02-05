@@ -1,12 +1,46 @@
-import mariadb
+
 import sys
 import requests
 import json
 import os
+import psycopg2
 
 ACCESS_TOKEN = os.getenv('YNAB_API_KEY')
+print(ACCESS_TOKEN)
 BASE_URL = 'https://api.youneedabudget.com/v1'
 
+def connect_to_psql(host, user, password, database):
+    try:
+        # Establish a connection to the MariaDB server
+        connection = psycopg2.connect(
+            host=host,
+            user=user,
+            password=password,
+            database=database
+        )
+
+        try:
+            # Create a cursor
+            cursor = connection.cursor()
+
+            # Execute a lightweight query (e.g., SELECT 1)
+            cursor.execute("SELECT 1;")
+
+            # Fetch the result (optional)
+            result = cursor.fetchone()
+
+            # Close the cursor
+            cursor.close()
+            print("Connected to MariaDB")
+            return connection
+        except:
+            print('Error')
+            return 
+
+    except psycopg2.Error as e:
+        print(f"Error: {e}")
+        return
+'''
 def connect_to_mariadb(host, user, password, database):
     try:
         # Establish a connection to the MariaDB server
@@ -27,7 +61,7 @@ def connect_to_mariadb(host, user, password, database):
     except mariadb.Error as e:
         print(f"Error: {e}")
         return
-
+'''
 
 def get_budgets():
     endpoint = '/budgets'
@@ -104,7 +138,7 @@ def main():
     print(json.dumps(transactions, indent=2))
     
     # Connect to server
-    connection = connect_to_mariadb('localhost', 'root', 'ynab123', 'YNAB')
+    connection = connect_to_psql('db', 'postgres', 'postgres', 'postgres')
     
     
     
