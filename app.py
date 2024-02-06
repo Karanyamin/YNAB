@@ -16,30 +16,12 @@ def connect_to_psql(host, user, password, database):
             host=host,
             user=user,
             password=password,
-            database=database
+            dbname=database
         )
-
-        try:
-            # Create a cursor
-            cursor = connection.cursor()
-
-            # Execute a lightweight query (e.g., SELECT 1)
-            cursor.execute("SELECT 1;")
-
-            # Fetch the result (optional)
-            result = cursor.fetchone()
-
-            # Close the cursor
-            cursor.close()
-            print("Connected to MariaDB")
-            return connection
-        except:
-            print('Error')
-            return 
-
+        return connection
     except psycopg2.Error as e:
         print(f"Error: {e}")
-        return
+        sys.exit(1)
 
 def get_budgets():
     endpoint = '/budgets'
@@ -95,14 +77,35 @@ def get_accounts(budget_id):
         print(response.text)
         return None
     
-def close_to_mariadb(connection):
-    if connection:
-        connection.close()
-        print("Succesfully disconnected from MariaDB")
-    else:
-        print("Could not disconnect from MariaDB")
+def drop_table(table_name, db_cursor):
+    try:
+        db_cursor.execute(f"""
+        --sql
+        DROP TABLE IF EXISTS {table_name}
+        ;
+        """)
+    except Exception as e:
+        print(f'Error occured while dropping the table {e}')
+    
     
 def main():
+    #Connect to database
+    connection = connect_to_psql('db', 'postgres', 'postgres', 'postgres')
+    cursor = connection.cursor()
+    
+    
+    #Create tables if they dont exist
+    cursor.execute("""
+    --sql
+    CREATE TABLE IF NOT EXISTS accounts (
+        id serial primary key,
+        name varchar(255),
+        
+    )
+    ;
+    """)
+    
+    
     budgets = get_budgets()
     #print(json.dumps(budgets, indent=2))
     budget_id = budgets['data']['budgets'][0]['id']
@@ -115,8 +118,6 @@ def main():
     transactions = get_transactions(budget_id)
     print(json.dumps(transactions, indent=2))
     
-    # Connect to server
-    connection = connect_to_psql('db', 'postgres', 'postgres', 'postgres')
     
     
     
@@ -124,7 +125,11 @@ def main():
     
     
     
-    # Close the connection
-    close_to_mariadb(connection)    
+    #Commit the cursor and close connection
+    connection.commit()
+    cursor.close()
+    connection.close()
+    print("Succesfully disconnected from MariaDB")
+      
     
 main()
