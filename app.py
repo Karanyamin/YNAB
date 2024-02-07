@@ -43,6 +43,24 @@ def get_budgets():
         print(response.text)
         return None
     
+def get_categories(budget_id):
+    endpoint = f'/budgets/{budget_id}/categories'
+    url = BASE_URL + endpoint
+
+    headers = {
+        'Authorization': f'Bearer {ACCESS_TOKEN}',
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data
+    else:
+        print(f"Error: {response.status_code}")
+        print(response.text)
+        return None
+    
 def get_transactions(budget_id):
     endpoint = f'/budgets/{budget_id}/transactions'
     url = BASE_URL + endpoint
@@ -192,6 +210,38 @@ def insert_into_accounts(db_cursor, accounts_json):
     db_cursor.executemany(insert_query, accounts)
     print('Inserted into accounts table')
     
+def insert_into_categories(db_cursor, categories_json):
+    category_groups = []
+    categories = []
+    for category_group in categories_json['data']['category_groups']:
+        category_groups.append((category_group['id'], category_group['name']))
+        for category in category_group['categories']:
+            categories.append((category['id'], category['name'], category['category_group_id']))
+        
+    insert_query_groups = 'INSERT INTO category_groups(id, group_name) VALUES (%s, %s)'
+    insert_query_categories = 'INSERT INTO categories(id, category_name, category_group_id) VALUES (%s, %s, %s)'
+    db_cursor.executemany(insert_query_groups, category_groups)
+    db_cursor.executemany(insert_query_categories, categories)
+    print('Inserted into category groups and categories')
+    
+def insert_into_transactions(db_cursor, transactions_json):
+    transactions = []
+    for transaction in transactions_json['data']['transactions']:
+        print(json.dumps(transaction, indent=2))
+        if transaction['category_name'] == 'Split':
+            for subtransaction in transaction['subtransactions']:
+                if subtransaction['memo']: #If memo is not null
+                    transactions.append((subtransaction['id'], transaction['date'], subtransaction['amount'], transaction['cleared'], subtransaction['memo'], transaction['payee_id'], transaction['account_id'], subtransaction['category_id']))
+                else:
+                    transactions.append((subtransaction['id'], transaction['date'], subtransaction['amount'], transaction['cleared'], transaction['memo'], transaction['payee_id'], transaction['account_id'], subtransaction['category_id']))
+        else:
+            transactions.append((transaction['id'], transaction['date'], transaction['amount'], transaction['cleared'], transaction['memo'], transaction['payee_id'], transaction['account_id'], transaction['category_id']))
+    insert_query = 'INSERT INTO transactions(id, transaction_date, amount, cleared, memo, payee_id, account_id, category_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
+    #db_cursor.executemany(insert_query, transactions)
+    #for transaction in transactions:
+    #    print(transaction)
+    print('Inserted data into transaction table')
+    
 def main():
     #Connect to database
     with connect_to_psql('db', 'postgres', 'postgres', 'postgres') as connection:
@@ -210,9 +260,19 @@ def main():
             
             #Get list of accounts and insert
             accounts_json = get_accounts(budget_id)
-            insert_into_accounts(cursor, accounts_json)
+            #insert_into_accounts(cursor, accounts_json)
             
+            #Get list of categories and insert
+            categories_json = get_categories(budget_id)
+            #insert_into_categories(cursor, categories_json)
             
+            #Get list of transactions and insert
+            transactions_json = get_transactions(budget_id)
+            print(json.dumps(transactions_json, indent=2))
+            #for transaction in transactions_json['data']['transactions']:
+            #    if transaction['category_id'] == '57fa6385-479a-4510-84d2-3b67ae3d7799':
+            #        print(json.dumps(transaction, indent=2))
+            #insert_into_transactions(cursor, transactions_json)
             
             #print(insert_into_payees(cursor, payees_json))
             #print(json.dumps(payees_json, indent=2))
