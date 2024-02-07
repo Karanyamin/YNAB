@@ -8,7 +8,6 @@ import psycopg2
 ## Numbers are returned in milliunits. 1000 milliunits equals one unit. 
 
 ACCESS_TOKEN = os.getenv('YNAB_API_KEY')
-print(ACCESS_TOKEN)
 BASE_URL = 'https://api.youneedabudget.com/v1'
 
 def connect_to_psql(host, user, password, database):
