@@ -174,7 +174,7 @@ def create_tables(db_cursor):
     db_cursor.execute("""
     --sql
     CREATE TABLE IF NOT EXISTS transactions(
-        id UUID primary key,
+        id TEXT primary key,
         transaction_date DATE NOT NULL,
         amount INT NOT NULL,
         cleared TEXT NOT NULL,
@@ -227,7 +227,6 @@ def insert_into_categories(db_cursor, categories_json):
 def insert_into_transactions(db_cursor, transactions_json):
     transactions = []
     for transaction in transactions_json['data']['transactions']:
-        print(json.dumps(transaction, indent=2))
         if transaction['category_name'] == 'Split':
             for subtransaction in transaction['subtransactions']:
                 if subtransaction['memo']: #If memo is not null
@@ -237,9 +236,7 @@ def insert_into_transactions(db_cursor, transactions_json):
         else:
             transactions.append((transaction['id'], transaction['date'], transaction['amount'], transaction['cleared'], transaction['memo'], transaction['payee_id'], transaction['account_id'], transaction['category_id']))
     insert_query = 'INSERT INTO transactions(id, transaction_date, amount, cleared, memo, payee_id, account_id, category_id) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
-    #db_cursor.executemany(insert_query, transactions)
-    #for transaction in transactions:
-    #    print(transaction)
+    db_cursor.executemany(insert_query, transactions)
     print('Inserted data into transaction table')
     
 def main():
@@ -247,7 +244,7 @@ def main():
     with connect_to_psql('db', 'postgres', 'postgres', 'postgres') as connection:
         with connection.cursor() as cursor:
         
-            #create_tables(cursor)
+            create_tables(cursor)
             
             #Order of input payee -> accounts -> category groups -> categories -> transactions
             
@@ -256,38 +253,23 @@ def main():
             
             #Get list of payees and insert
             payees_json = get_payee_list(budget_id)
-            #insert_into_payees(cursor, payees_json)
+            insert_into_payees(cursor, payees_json)
             
             #Get list of accounts and insert
             accounts_json = get_accounts(budget_id)
-            #insert_into_accounts(cursor, accounts_json)
+            insert_into_accounts(cursor, accounts_json)
             
             #Get list of categories and insert
             categories_json = get_categories(budget_id)
-            #insert_into_categories(cursor, categories_json)
+            insert_into_categories(cursor, categories_json)
             
             #Get list of transactions and insert
             transactions_json = get_transactions(budget_id)
-            print(json.dumps(transactions_json, indent=2))
-            #for transaction in transactions_json['data']['transactions']:
-            #    if transaction['category_id'] == '57fa6385-479a-4510-84d2-3b67ae3d7799':
-            #        print(json.dumps(transaction, indent=2))
-            #insert_into_transactions(cursor, transactions_json)
+            insert_into_transactions(cursor, transactions_json)
             
-            #print(insert_into_payees(cursor, payees_json))
-            #print(json.dumps(payees_json, indent=2))
-            '''
-            account_list = []
-            for account in accounts['data']['accounts']:
-                account_list.append(account['name'])
-                
-            transactions = get_transactions(budget_id)
-            print(json.dumps(transactions, indent=2))
-            '''
+         
             
             cursor.executemany
-            
-            
             
             
             
