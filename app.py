@@ -111,7 +111,7 @@ def create_tables(db_cursor):
   #Create tables if they dont exist
     db_cursor.execute("""
     --sql
-    CREATE TABLE IF NOT EXISTS accounts (
+    CREATE TABLE IF NOT EXISTS accounts(
         id serial primary key,
         ynab_id varchar(255),
         account_name varchar(255),
@@ -125,10 +125,10 @@ def create_tables(db_cursor):
     
     db_cursor.execute("""
     --sql
-    CREATE TABLE IF NOT EXISTS payees (
+    CREATE TABLE IF NOT EXISTS payees(
         id serial primary key,
         ynab_id varchar(255),
-        payee_name varchar(255),
+        payee_name varchar(255)
     )
     ; 
     """)
@@ -147,7 +147,7 @@ def create_tables(db_cursor):
     CREATE TABLE IF NOT EXISTS categories(
         id serial primary key,
         category_name varchar(255),
-        category_group_id varchar(255) REFERENCES category_groups(id),
+        category_group_id INT REFERENCES category_groups(id)
     )
     ;
     """)
@@ -159,14 +159,15 @@ def create_tables(db_cursor):
         id serial primary key,
         transaction_date DATE,
         amount INT,
-        cleared BOOLEAN
-        memo varchar(255)
-        payee_id INT REFERENCES payees(id)
-        account_id INT REFERENCES accounts(id)
+        cleared BOOLEAN,
+        memo varchar(255),
+        payee_id INT REFERENCES payees(id),
+        account_id INT REFERENCES accounts(id),
         category_id INT REFERENCES categories(id)
     ) 
     ;
     """)
+    print("Tables created successfully")
     
 def drop_table(db_cursor, db_name):
     db_cursor.execute(f"""
@@ -183,13 +184,13 @@ def main():
     connection = connect_to_psql('db', 'postgres', 'postgres', 'postgres')
     cursor = connection.cursor()
     
-    #create_tables(cursor)
+    create_tables(cursor)
     
     budgets = get_budgets()
     #print(json.dumps(budgets, indent=2))
     budget_id = budgets['data']['budgets'][0]['id']
     transactions = get_transactions(budget_id)
-    print(json.dumps(transactions, indent=2))
+    #print(json.dumps(transactions, indent=2))
     '''
     account_list = []
     for account in accounts['data']['accounts']:
