@@ -109,35 +109,35 @@ def drop_table(table_name, db_cursor):
         
 def create_tables(db_cursor):
   #Create tables if they dont exist
-    db_cursor.execute("""
-    --sql
-    CREATE TABLE IF NOT EXISTS accounts(
-        id serial primary key,
-        ynab_id varchar(255),
-        account_name varchar(255),
-        account_type varchar(255),
-        balance INT,
-        cleared_balance INT,
-        uncleared_balance INT
-    )
-    ;
-    """)  
-    
+      
     db_cursor.execute("""
     --sql
     CREATE TABLE IF NOT EXISTS payees(
-        id serial primary key,
-        ynab_id varchar(255),
-        payee_name varchar(255)
+        id UUID primary key,
+        payee_name TEXT NOT NULL
     )
     ; 
     """)
     
     db_cursor.execute("""
     --sql
+    CREATE TABLE IF NOT EXISTS accounts(
+        id UUID PRIMARY KEY, 
+        account_name TEXT NOT NULL,
+        account_type TEXT NOT NULL,
+        balance INT NOT NULL,
+        cleared_balance INT NOT NULL,
+        uncleared_balance INT NOT NULL,
+        transfer_payee_id UUID REFERENCES payees(id)
+    )
+    ;
+    """)
+    
+    db_cursor.execute("""
+    --sql
     CREATE TABLE IF NOT EXISTS category_groups(
-        id serial primary key,
-        group_name varchar(255)
+        id UUID primary key,
+        group_name TEXT NOT NULL
     )
     ;
     """)
@@ -145,9 +145,9 @@ def create_tables(db_cursor):
     db_cursor.execute("""
     --sql
     CREATE TABLE IF NOT EXISTS categories(
-        id serial primary key,
-        category_name varchar(255),
-        category_group_id INT REFERENCES category_groups(id)
+        id UUID primary key,
+        category_name TEXT NOT NULL,
+        category_group_id UUID REFERENCES category_groups(id) NOT NULL
     )
     ;
     """)
@@ -156,14 +156,14 @@ def create_tables(db_cursor):
     db_cursor.execute("""
     --sql
     CREATE TABLE IF NOT EXISTS transactions(
-        id serial primary key,
-        transaction_date DATE,
-        amount INT,
-        cleared BOOLEAN,
-        memo varchar(255),
-        payee_id INT REFERENCES payees(id),
-        account_id INT REFERENCES accounts(id),
-        category_id INT REFERENCES categories(id)
+        id UUID primary key,
+        transaction_date DATE NOT NULL,
+        amount INT NOT NULL,
+        cleared TEXT NOT NULL,
+        memo TEXT,
+        payee_id UUID REFERENCES payees(id),
+        account_id UUID REFERENCES accounts(id) NOT NULL,
+        category_id UUID REFERENCES categories(id)
     ) 
     ;
     """)
@@ -176,41 +176,65 @@ def drop_table(db_cursor, db_name):
     ;
     """)
     
-
+def insert_into_payees(db_cursor, payees_json):
+    payees = []
+    for payee in payees_json['data']['payees']:
+        payees.append((payee['id'], payee['name']))
+    insert_query = 'INSERT INTO payees(id, payee_name) VALUES (%s, %s)'
+    db_cursor.executemany(insert_query, payees)
+    print('Inserted Data into payees table')
     
+def insert_into_accounts(db_cursor, accounts_json):
+    accounts = []
+    for account in accounts_json['data']['accounts']:
+        accounts.append((account['id'], account['name'], account['type'], account['balance'], account['cleared_balance'], account['uncleared_balance'], account['transfer_payee_id']))
+    insert_query = 'INSERT INTO accounts(id, account_name, account_type, balance, cleared_balance, uncleared_balance, transfer_payee_id) VALUES (%s, %s, %s, %s, %s, %s, %s)'
+    db_cursor.executemany(insert_query, accounts)
+    print('Inserted into accounts table')
     
 def main():
     #Connect to database
-    connection = connect_to_psql('db', 'postgres', 'postgres', 'postgres')
-    cursor = connection.cursor()
-    
-    create_tables(cursor)
-    
-    budgets = get_budgets()
-    #print(json.dumps(budgets, indent=2))
-    budget_id = budgets['data']['budgets'][0]['id']
-    transactions = get_transactions(budget_id)
-    #print(json.dumps(transactions, indent=2))
-    '''
-    account_list = []
-    for account in accounts['data']['accounts']:
-        account_list.append(account['name'])
+    with connect_to_psql('db', 'postgres', 'postgres', 'postgres') as connection:
+        with connection.cursor() as cursor:
         
-    transactions = get_transactions(budget_id)
-    print(json.dumps(transactions, indent=2))
-    '''
-    
-    
-    
-    
-    
-    
-    
-    #Commit the cursor and close connection
-    connection.commit()
-    cursor.close()
-    connection.close()
-    print("Succesfully disconnected from MariaDB")
+            #create_tables(cursor)
+            
+            #Order of input payee -> accounts -> category groups -> categories -> transactions
+            
+            #Get budget ID
+            budget_id = get_budgets()['data']['budgets'][0]['id']
+            
+            #Get list of payees and insert
+            payees_json = get_payee_list(budget_id)
+            #insert_into_payees(cursor, payees_json)
+            
+            #Get list of accounts and insert
+            accounts_json = get_accounts(budget_id)
+            insert_into_accounts(cursor, accounts_json)
+            
+            
+            
+            #print(insert_into_payees(cursor, payees_json))
+            #print(json.dumps(payees_json, indent=2))
+            '''
+            account_list = []
+            for account in accounts['data']['accounts']:
+                account_list.append(account['name'])
+                
+            transactions = get_transactions(budget_id)
+            print(json.dumps(transactions, indent=2))
+            '''
+            
+            cursor.executemany
+            
+            
+            
+            
+            
+            #Commit the cursor and close connection
+            connection.commit()
+            
+    print("Succesfully disconnected from PostgreSQL")
       
     
 main()
